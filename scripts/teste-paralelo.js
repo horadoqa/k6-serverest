@@ -1,5 +1,5 @@
 import http from 'k6/http';
-import { check, sleep } from 'k6';
+import { check } from 'k6';
 
 // ============================================================
 // Configuração
@@ -35,9 +35,17 @@ const txtIds = open(TXT_FILE)
   .map(id => id.trim())
   .filter(id => id.length > 0);
 
+
 // ============================================================
-// Cenários
+// Configuração de carga
+//
+// 1 minuto  -> 100 req/s
+// 4 minutos -> 500 req/s
+// 30 segundos -> 0 req/s
 // ============================================================
+
+const START_RPS = 1;
+const TARGET_RPS = 1;
 
 export const options = {
   scenarios: {
@@ -47,27 +55,57 @@ export const options = {
     // --------------------------------------------------------
 
     json_inicio_fim: {
-      executor: 'shared-iterations',
-      vus: 1,
-      iterations: jsonUsers.length,
+      executor: 'ramping-arrival-rate',
+
+      startRate: START_RPS,
+      timeUnit: '1s',
+
+      preAllocatedVUs: 100,
+      maxVUs: 1000,
+
+      stages: [
+        { duration: '1m', target: START_RPS },
+        { duration: '4m', target: TARGET_RPS },
+        { duration: '30s', target: 0 },
+      ],
+
       exec: 'jsonInicioFim',
-      startTime: '0s',
     },
 
     json_fim_inicio: {
-      executor: 'shared-iterations',
-      vus: 1,
-      iterations: jsonUsers.length,
+      executor: 'ramping-arrival-rate',
+
+      startRate: START_RPS,
+      timeUnit: '1s',
+
+      preAllocatedVUs: 100,
+      maxVUs: 1000,
+
+      stages: [
+        { duration: '1m', target: START_RPS },
+        { duration: '4m', target: TARGET_RPS },
+        { duration: '30s', target: 0 },
+      ],
+
       exec: 'jsonFimInicio',
-      startTime: '0s',
     },
 
     json_aleatorio: {
-      executor: 'shared-iterations',
-      vus: 1,
-      iterations: 10,
+      executor: 'ramping-arrival-rate',
+
+      startRate: START_RPS,
+      timeUnit: '1s',
+
+      preAllocatedVUs: 100,
+      maxVUs: 1000,
+
+      stages: [
+        { duration: '1m', target: START_RPS },
+        { duration: '4m', target: TARGET_RPS },
+        { duration: '30s', target: 0 },
+      ],
+
       exec: 'jsonAleatorio',
-      startTime: '0s',
     },
 
     // --------------------------------------------------------
@@ -75,27 +113,57 @@ export const options = {
     // --------------------------------------------------------
 
     csv_inicio_fim: {
-      executor: 'shared-iterations',
-      vus: 1,
-      iterations: csvIds.length,
+      executor: 'ramping-arrival-rate',
+
+      startRate: START_RPS,
+      timeUnit: '1s',
+
+      preAllocatedVUs: 100,
+      maxVUs: 1000,
+
+      stages: [
+        { duration: '1m', target: START_RPS },
+        { duration: '4m', target: TARGET_RPS },
+        { duration: '30s', target: 0 },
+      ],
+
       exec: 'csvInicioFim',
-      startTime: '0s',
     },
 
     csv_fim_inicio: {
-      executor: 'shared-iterations',
-      vus: 1,
-      iterations: csvIds.length,
+      executor: 'ramping-arrival-rate',
+
+      startRate: START_RPS,
+      timeUnit: '1s',
+
+      preAllocatedVUs: 100,
+      maxVUs: 1000,
+
+      stages: [
+        { duration: '1m', target: START_RPS },
+        { duration: '4m', target: TARGET_RPS },
+        { duration: '30s', target: 0 },
+      ],
+
       exec: 'csvFimInicio',
-      startTime: '0s',
     },
 
     csv_aleatorio: {
-      executor: 'shared-iterations',
-      vus: 1,
-      iterations: 10,
+      executor: 'ramping-arrival-rate',
+
+      startRate: START_RPS,
+      timeUnit: '1s',
+
+      preAllocatedVUs: 100,
+      maxVUs: 1000,
+
+      stages: [
+        { duration: '1m', target: START_RPS },
+        { duration: '4m', target: TARGET_RPS },
+        { duration: '30s', target: 0 },
+      ],
+
       exec: 'csvAleatorio',
-      startTime: '0s',
     },
 
     // --------------------------------------------------------
@@ -103,30 +171,61 @@ export const options = {
     // --------------------------------------------------------
 
     txt_inicio_fim: {
-      executor: 'shared-iterations',
-      vus: 1,
-      iterations: txtIds.length,
+      executor: 'ramping-arrival-rate',
+
+      startRate: START_RPS,
+      timeUnit: '1s',
+
+      preAllocatedVUs: 100,
+      maxVUs: 1000,
+
+      stages: [
+        { duration: '1m', target: START_RPS },
+        { duration: '4m', target: TARGET_RPS },
+        { duration: '30s', target: 0 },
+      ],
+
       exec: 'txtInicioFim',
-      startTime: '0s',
     },
 
     txt_fim_inicio: {
-      executor: 'shared-iterations',
-      vus: 1,
-      iterations: txtIds.length,
+      executor: 'ramping-arrival-rate',
+
+      startRate: START_RPS,
+      timeUnit: '1s',
+
+      preAllocatedVUs: 100,
+      maxVUs: 1000,
+
+      stages: [
+        { duration: '1m', target: START_RPS },
+        { duration: '4m', target: TARGET_RPS },
+        { duration: '30s', target: 0 },
+      ],
+
       exec: 'txtFimInicio',
-      startTime: '0s',
     },
 
     txt_aleatorio: {
-      executor: 'shared-iterations',
-      vus: 1,
-      iterations: 10,
+      executor: 'ramping-arrival-rate',
+
+      startRate: START_RPS,
+      timeUnit: '1s',
+
+      preAllocatedVUs: 100,
+      maxVUs: 1000,
+
+      stages: [
+        { duration: '1m', target: START_RPS },
+        { duration: '4m', target: TARGET_RPS },
+        { duration: '30s', target: 0 },
+      ],
+
       exec: 'txtAleatorio',
-      startTime: '0s',
     },
   },
 };
+
 
 // ============================================================
 // Função auxiliar
@@ -140,104 +239,128 @@ function consultarUsuario(id) {
     'resposta possui conteúdo': (r) =>
       r.body && r.body.length > 0,
   });
-
-  sleep(1);
 }
+
+
+// ============================================================
+// Função para obter índice global aproximado
+//
+// __ITER é o número da iteração daquele VU.
+// __VU identifica o VU.
+//
+// Para os testes de sequência, usamos uma combinação dos
+// dois para evitar que cada VU fique sempre no mesmo registro.
+// ============================================================
+
+function indiceMassa(tamanho) {
+  return ((__VU - 1) + (__ITER * 1000)) % tamanho;
+}
+
 
 // ============================================================
 // JSON — início → fim
 // ============================================================
 
 export function jsonInicioFim() {
-  const user = jsonUsers[__ITER];
-  const id = user._id;
+  const index = indiceMassa(jsonUsers.length);
 
-  consultarUsuario(id);
+  const user = jsonUsers[index];
+
+  consultarUsuario(user._id);
 }
+
 
 // ============================================================
 // JSON — fim → início
 // ============================================================
 
 export function jsonFimInicio() {
-  const index = jsonUsers.length - 1 - __ITER;
-  const user = jsonUsers[index];
-  const id = user._id;
+  const index = indiceMassa(jsonUsers.length);
 
-  consultarUsuario(id);
+  const reverseIndex = jsonUsers.length - 1 - index;
+
+  const user = jsonUsers[reverseIndex];
+
+  consultarUsuario(user._id);
 }
+
 
 // ============================================================
 // JSON — aleatório
 // ============================================================
 
 export function jsonAleatorio() {
-  const user =
-    jsonUsers[Math.floor(Math.random() * jsonUsers.length)];
+  const index = Math.floor(Math.random() * jsonUsers.length);
 
-  consultarUsuario(user._id);
+  consultarUsuario(jsonUsers[index]._id);
 }
+
 
 // ============================================================
 // CSV — início → fim
 // ============================================================
 
 export function csvInicioFim() {
-  const id = csvIds[__ITER];
+  const index = indiceMassa(csvIds.length);
 
-  consultarUsuario(id);
+  consultarUsuario(csvIds[index]);
 }
+
 
 // ============================================================
 // CSV — fim → início
 // ============================================================
 
 export function csvFimInicio() {
-  const index = csvIds.length - 1 - __ITER;
-  const id = csvIds[index];
+  const index = indiceMassa(csvIds.length);
 
-  consultarUsuario(id);
+  const reverseIndex = csvIds.length - 1 - index;
+
+  consultarUsuario(csvIds[reverseIndex]);
 }
+
 
 // ============================================================
 // CSV — aleatório
 // ============================================================
 
 export function csvAleatorio() {
-  const id =
-    csvIds[Math.floor(Math.random() * csvIds.length)];
+  const index = Math.floor(Math.random() * csvIds.length);
 
-  consultarUsuario(id);
+  consultarUsuario(csvIds[index]);
 }
+
 
 // ============================================================
 // TXT — início → fim
 // ============================================================
 
 export function txtInicioFim() {
-  const id = txtIds[__ITER];
+  const index = indiceMassa(txtIds.length);
 
-  consultarUsuario(id);
+  consultarUsuario(txtIds[index]);
 }
+
 
 // ============================================================
 // TXT — fim → início
 // ============================================================
 
 export function txtFimInicio() {
-  const index = txtIds.length - 1 - __ITER;
-  const id = txtIds[index];
+  const index = indiceMassa(txtIds.length);
 
-  consultarUsuario(id);
+  const reverseIndex = txtIds.length - 1 - index;
+
+  consultarUsuario(txtIds[reverseIndex]);
 }
+
 
 // ============================================================
 // TXT — aleatório
 // ============================================================
 
 export function txtAleatorio() {
-  const id =
-    txtIds[Math.floor(Math.random() * txtIds.length)];
+  const index = Math.floor(Math.random() * txtIds.length);
 
-  consultarUsuario(id);
+  consultarUsuario(txtIds[index]);
 }

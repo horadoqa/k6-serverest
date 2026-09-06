@@ -12,4 +12,4 @@ datasources:
     jsonData:
       version: InfluxQL
       httpMode: POST
-      timeInterval: 1s
+      timeInterval: 5s
