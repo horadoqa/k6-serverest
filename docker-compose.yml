@@ -1,0 +1,47 @@
+services:
+
+  influxdb:
+    image: influxdb:1.8
+    container_name: k6-influxdb
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      INFLUXDB_DB: k6
+      INFLUXDB_HTTP_AUTH_ENABLED: "false"
+    volumes:
+      - influxdb_data:/var/lib/influxdb
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: k6-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - influxdb
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+      # Provisionamento automático
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+
+  k6:
+    image: grafana/k6:latest
+    container_name: k6-runner
+    depends_on:
+      - influxdb
+    volumes:
+      - ./scripts:/scripts
+      - ./data:/data
+    working_dir: /scripts
+    entrypoint: ["k6"]
+
+volumes:
+  influxdb_data:
+  grafana_data:

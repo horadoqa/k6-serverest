@@ -1,0 +1,117 @@
+{
+    "quantidade": 16,
+    "usuarios": [
+        {
+            "nome": "Fulano da Silva",
+            "email": "fulano@qa.com",
+            "password": "teste",
+            "administrador": "true",
+            "_id": "0uxuPY0cbmQhpEz1"
+        },
+        {
+            "nome": "QA Automation",
+            "email": "qa.automation.178867578143716792@teste.com",
+            "password": "Senha@123",
+            "administrador": "false",
+            "_id": "BP69Hi1rxvTAUzvR"
+        },
+        {
+            "nome": "QA Automation",
+            "email": "qa.automation.178867577810830396@teste.com",
+            "password": "Senha@123",
+            "administrador": "false",
+            "_id": "EZbyiaqpEsEeY7zZ"
+        },
+        {
+            "nome": "QA Comprador",
+            "email": "qa.crud.comprador.1788675586919609500@teste.com",
+            "password": "Senha@123",
+            "administrador": "false",
+            "_id": "OCYAn0HsuX27RPrs"
+        },
+        {
+            "nome": "QA Automation",
+            "email": "qa.automation.178867578209032@teste.com",
+            "password": "Senha@123",
+            "administrador": "true",
+            "_id": "TZGHEzpBxRK3FW0u"
+        },
+        {
+            "nome": "QA Admin",
+            "email": "qa.delprod.admin.1788675630047218200@teste.com",
+            "password": "Senha@123",
+            "administrador": "true",
+            "_id": "U5WOzSmVzxKWrE7E"
+        },
+        {
+            "nome": "QA Admin",
+            "email": "qa.check2.admin.1788675656748650900@teste.com",
+            "password": "Senha@123",
+            "administrador": "true",
+            "_id": "Z8WaWDBs9mqAf9Nm"
+        },
+        {
+            "nome": "QA Automation",
+            "email": "qa.automation.178867578405859555@teste.com",
+            "password": "Senha@123",
+            "administrador": "true",
+            "_id": "cT5BPNDXAlpp6xq5"
+        },
+        {
+            "nome": "tmp",
+            "email": "qa.tmp.1788675630047218200@teste.com",
+            "password": "Senha@123",
+            "administrador": "false",
+            "_id": "ga32uE6iv47EBxlx"
+        },
+        {
+            "nome": "Fulano da Silva",
+            "email": "beltrano@qa.com.br",
+            "password": "teste",
+            "administrador": "true",
+            "_id": "m78dL5WX3nSzScfw"
+        },
+        {
+            "nome": "QA Admin",
+            "email": "qa.crud.admin.1788675586919609500@teste.com",
+            "password": "Senha@123",
+            "administrador": "true",
+            "_id": "quTV7ZEooEzwjh2Z"
+        },
+        {
+            "nome": "QA Automation",
+            "email": "qa.automation.178867578449443236@teste.com",
+            "password": "Senha@123",
+            "administrador": "false",
+            "_id": "qyPEvkefkfibpBix"
+        },
+        {
+            "nome": "QA CRUD",
+            "email": "qa.crud.1788675555464160500@teste.com",
+            "password": "Senha@123",
+            "administrador": "false",
+            "_id": "s0tSleJZMWE4CCVu"
+        },
+        {
+            "nome": "QA Comprador",
+            "email": "qa.cancel.comprador.1788675610491767100@teste.com",
+            "password": "Senha@123",
+            "administrador": "false",
+            "_id": "u9hqiBjXjeykT4J9"
+        },
+        {
+            "nome": "QA Admin",
+            "email": "qa.cancel.admin.1788675610491767100@teste.com",
+            "password": "Senha@123",
+            "administrador": "true",
+            "_id": "uKD5J4Rsf01lGf3O"
+        },
+        {
+            "nome": "QA Automation",
+            "email": "qa.automation.178867578623215469@teste.com",
+            "password": "Senha@123",
+            "administrador": "false",
+            "_id": "uOk6325P2XQG96KS"
+        }
+    ]
+}

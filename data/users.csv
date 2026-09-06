@@ -1,0 +1,17 @@
+nome,email,password,administrador,_id
+Fulano da Silva,fulano@qa.com,teste,true,0uxuPY0cbmQhpEz1
+QA Automation,qa.automation.178867578143716792@teste.com,Senha@123,false,BP69Hi1rxvTAUzvR
+QA Automation,qa.automation.178867577810830396@teste.com,Senha@123,false,EZbyiaqpEsEeY7zZ
+QA Comprador,qa.crud.comprador.1788675586919609500@teste.com,Senha@123,false,OCYAn0HsuX27RPrs
+QA Automation,qa.automation.178867578209032@teste.com,Senha@123,true,TZGHEzpBxRK3FW0u
+QA Admin,qa.delprod.admin.1788675630047218200@teste.com,Senha@123,true,U5WOzSmVzxKWrE7E
+QA Admin,qa.check2.admin.1788675656748650900@teste.com,Senha@123,true,Z8WaWDBs9mqAf9Nm
+QA Automation,qa.automation.178867578405859555@teste.com,Senha@123,true,cT5BPNDXAlpp6xq5
+tmp,qa.tmp.1788675630047218200@teste.com,Senha@123,false,ga32uE6iv47EBxlx
+Fulano da Silva,beltrano@qa.com.br,teste,true,m78dL5WX3nSzScfw
+QA Admin,qa.crud.admin.1788675586919609500@teste.com,Senha@123,true,quTV7ZEooEzwjh2Z
+QA Automation,qa.automation.178867578449443236@teste.com,Senha@123,false,qyPEvkefkfibpBix
+QA CRUD,qa.crud.1788675555464160500@teste.com,Senha@123,false,s0tSleJZMWE4CCVu
+QA Comprador,qa.cancel.comprador.1788675610491767100@teste.com,Senha@123,false,u9hqiBjXjeykT4J9
+QA Admin,qa.cancel.admin.1788675610491767100@teste.com,Senha@123,true,uKD5J4Rsf01lGf3O
+QA Automation,qa.automation.178867578623215469@teste.com,Senha@123,false,uOk6325P2XQG96KS
