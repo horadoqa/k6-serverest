@@ -1,499 +1,967 @@
 # Teste de Performance com k6 — ServeRest
 
-Projeto de testes de performance utilizando **k6** para realizar requisições na API do ServeRest.
+Projeto de testes de performance utilizando **k6** para realizar requisições na API do [ServeRest](<https://serverest.dev>).
 
-O projeto utiliza a lista de usuários disponibilizada pela API, extrai seus IDs e permite executar diferentes estratégias de acesso:
+O projeto permite testar diferentes estratégias de acesso aos usuários da API:
 
-- Percorrer os IDs do primeiro ao último.
-- Percorrer os IDs do último ao primeiro.
-- Acessar IDs de forma aleatória.
-- Executar os testes utilizando `check` e configurações de `options` do k6.
+- Percorrer usuários do primeiro ao último.
+- Percorrer usuários do último ao primeiro.
+- Acessar usuários aleatoriamente.
+- Utilizar diferentes formatos de massa: **JSON, CSV e TXT**.
+- Executar os 9 cenários individualmente.
+- Executar todos os 9 cenários simultaneamente através de um único teste k6.
+- Enviar as métricas para **InfluxDB**.
+- Visualizar os resultados através do **Grafana**.
+- Utilizar o `Makefile` para automatizar a execução.
+
+---
 
 ## Estrutura do projeto
 
 ```
 .
-├── ids.txt
-├── buscar_ids.sh
-├── teste-inicio-fim.js
-├── teste-fim-inicio.js
-├── teste-aleatorio.js
-└── README.md
+├── Makefile
+├── README.md
+├── data
+│   ├── buscar-usuarios.sh
+│   ├── users.csv
+│   ├── users.json
+│   └── users.txt
+├── docker-compose.yml
+├── grafana
+│   └── provisioning
+│       ├── dashboards
+│       │   ├── dashboard.yml
+│       │   └── k6-dashboard.json
+│       └── datasources
+│           └── influxdb.yml
+└── scripts
+    ├── csv
+    │   ├── teste-aleatorio.js
+    │   ├── teste-fim-inicio.js
+    │   └── teste-inicio-fim.js
+    ├── json
+    │   ├── teste-aleatorio.js
+    │   ├── teste-fim-inicio.js
+    │   └── teste-inicio-fim.js
+    ├── teste-paralelo.js
+    └── txt
+        ├── shuffle.js
+        ├── teste-aleatorio.js
+        ├── teste-fim-inicio.js
+        └── teste-inicio-fim.js
 ```
 
-> Os nomes dos arquivos `.js` são apenas uma sugestão. Você pode alterá-los conforme a organização do projeto.
+### Organização
 
-## Pré-requisitos
+A estrutura foi separada em duas responsabilidades:
 
-É necessário ter instalado:
+```
+data/
+└── Massa de dados
 
-- k6
-- `curl`
-- `jq`
+scripts/
+└── Scripts de teste k6
+```
 
-### Verificar instalação
+ A pasta `data` contém os arquivos utilizados pelos testes:
+
+```
+data/
+├── users.json
+├── users.csv
+└── users.txt
+```
+
+O diretório `scripts` contém os cenários de performance.
+
+---
+
+# Pré-requisitos
+
+Para executar o projeto localmente, é necessário ter:
+
+- Docker
+- Docker Compose
+- Bash
+- curl
+- jq
+- GNU Make
+
+O k6 não precisa estar instalado no host quando os testes forem executados pelo Docker.
+
+## Verificar instalação
+
+```bash
+docker --version
+docker compose version
+curl --version
+jq --version
+make --version
+```
+
+Caso queira executar os testes k6 diretamente no host, também será necessário:
 
 ```
 k6 version
-curl --version
-jq --version
 ```
 
-## 1\. Gerando o arquivo de IDs
+---
 
-O script `buscar_ids.sh` consulta a API de usuários do ServeRest e salva os IDs em um arquivo chamado `ids.txt`.
+# Massa de dados
 
-```
-#!/bin/bash
-
-URL="https://serverest.dev/usuarios"
-ARQUIVO="ids.txt"
-
-curl -s "$URL" | jq -r '.usuarios[]["_id"]' > "$ARQUIVO"
-
-echo "IDs salvos em $ARQUIVO"
-```
-
-Dê permissão de execução:
+A massa de dados é obtida diretamente da API:
 
 ```
-chmod +x buscar_ids.sh
+https://serverest.dev/usuarios
 ```
 
-Execute:
+O script responsável pela geração é:
 
 ```
-./buscar_ids.sh
+data/buscar-usuarios.sh
 ```
 
-Depois disso, o arquivo `ids.txt` terá um ID por linha:
+Esse script consulta a API e gera três formatos de arquivo:
+
+```text
+data/users.json
+data/users.csv
+data/users.txt
+```
+
+## JSON
+
+O arquivo `users.json` mantém a estrutura retornada pela API:
+
+```json
+{
+  "usuarios": [
+    {
+      "nome": "Fulano da Silva",
+      "email": "fulano@qa.com",
+      "password": "teste",
+      "administrador": "true",
+      "_id": "0uxuPY0cbmQhpEz1"
+    }
+  ]
+}
+```
+
+## CSV
+
+O arquivo `users.csv` contém os dados dos usuários sem aspas:
+
+```
+nome,email,password,administrador,_id
+Fulano da Silva,fulano@qa.com,teste,true,0uxuPY0cbmQhpEz1
+QA Automation,qa.automation@teste.com,Senha@123,false,BP69Hi1rxvTAUzvR
+```
+
+ ## TXT
+
+O arquivo `users.txt` contém somente os IDs, um por linha:
 
 ```
 0uxuPY0cbmQhpEz1
-tXjGJ8b5w...
+BP69Hi1rxvTAUzvR
+EZbyiaqpEsEeY7zZ
+OCYAn0HsuX27RPrs
+```
+
+Esse formato é utilizado pelos cenários TXT.
+
+---
+
+# Atualizando a massa
+
+A atualização da massa pode ser feita através do Makefile:
+
+```
+make users-local
+```
+
+O comando executa:
+
+```
+DATA_DIR=./data ./data/buscar-usuarios.sh
+```
+
+ Ao finalizar, os arquivos serão atualizados:
+
+```
+data/
+├── users.csv
+├── users.json
+└── users.txt
+```
+
+ Sempre que `make all` ou `make parallel` for executado, a massa será atualizada antes dos testes.
+
+---
+
+# Cenários de teste
+
+Existem três estratégias de acesso:
+
+```
+1. Início → fim
+2. Fim → início
+3. Aleatório
+```
+
+Cada estratégia é implementada para os três formatos de massa:
+
+```
+             JSON        CSV        TXT
+
+Início       cenário     cenário    cenário
+Fim          cenário     cenário    cenário
+Aleatório    cenário     cenário    cenário
+```
+
+No total são **9 cenários**.
+
+---
+
+# 1\. JSON — início → fim
+
+ Arquivo:
+
+```
+scripts/json/teste-inicio-fim.js
+```
+
+Esse cenário carrega o `users.json` e percorre os usuários na ordem original.
+
+```
+Usuário 001
+    ↓
+Usuário 002
+    ↓
+Usuário 003
+    ↓
 ...
-```
-
-## 2\. Teste do primeiro ID até o último
-
-Neste cenário, o k6 percorre o arquivo na ordem em que os IDs estão armazenados.
-
-```
-import http from 'k6/http';
-import { check } from 'k6';
-
-const BASE_URL = 'https://serverest.dev';
-const IDS_FILE = '../data/ids.txt';
-
-const ids = open(IDS_FILE)
-  .split('\n')
-  .map(id => id.trim())
-  .filter(id => id.length > 0);
-
-export const options = {
-  vus: 1,
-  iterations: ids.length,
-};
-
-export default function () {
-  const id = ids[__ITER];
-
-  const response = http.get(`${BASE_URL}/usuarios/${id}`);
-
-  check(response, {
-    'status é 200': r => r.status === 200,
-    'resposta possui conteúdo': r => r.body && r.body.length > 0,
-  });
-}
+Usuário N
 ```
 
 Execução:
 
 ```
-k6 run teste-inicio-fim.js
+make json-inicio
 ```
 
-A sequência será:
+---
+
+# 2\. JSON — fim → início
+
+ Arquivo:
 
 ```
-ID 001
-  ↓
-ID 002
-  ↓
-ID 003
-  ↓
+scripts/json/teste-fim-inicio.js
+```
+
+ O cenário percorre os usuários na ordem inversa.
+
+```
+Usuário N
+    ↓
+Usuário N-1
+    ↓
+Usuário N-2
+    ↓
 ...
-ID N
+Usuário 001
 ```
 
-## 3\. Teste do último ID até o primeiro
-
-Para inverter a ordem dos IDs, utilizamos `reverse()`.
+ Execução:
 
 ```
-import http from 'k6/http';
-import { check } from 'k6';
-
-const BASE_URL = 'https://serverest.dev';
-const IDS_FILE = '../data/ids.txt';
-
-const ids = open(IDS_FILE)
-  .split('\n')
-  .map(id => id.trim())
-  .filter(id => id.length > 0)
-  .reverse();
-
-export const options = {
-  vus: 1,
-  iterations: ids.length,
-};
-
-export default function () {
-  const id = ids[__ITER];
-
-  const response = http.get(`${BASE_URL}/usuarios/${id}`);
-
-  check(response, {
-    'status é 200': r => r.status === 200,
-    'resposta possui conteúdo': r => r.body && r.body.length > 0,
-  });
-}
+make json-fim
 ```
+
+---
+
+# 3\. JSON — aleatório
+
+Arquivo:
+
+```
+scripts/json/teste-aleatorio.js
+```
+
+ A cada iteração, um usuário é escolhido aleatoriamente.
+
+ Exemplo:
+
+```
+Usuário 003
+Usuário 001
+Usuário 005
+Usuário 002
+Usuário 002
+Usuário 004
+Usuário 001
+...
+```
+
+ Os usuários podem ser repetidos.
+
+ Execução:
+
+```
+make json-aleatorio
+```
+
+---
+
+# 4\. CSV — início → fim
+
+ Arquivo:
+
+```
+scripts/csv/teste-inicio-fim.js
+```
+
+Lê o `users.csv` e percorre os IDs do primeiro ao último.
 
 Execução:
 
 ```
-k6 run teste-fim-inicio.js
+make csv-inicio
 ```
 
-Se o arquivo tiver:
+---
+
+# 5\. CSV — fim → início
+
+Arquivo:
 
 ```
-ID-001
-ID-002
-ID-003
-ID-004
-ID-005
+scripts/csv/teste-fim-inicio.js
 ```
 
-A execução será:
+Lê o `users.csv` e percorre os IDs do último ao primeiro.
+
+Execução:
 
 ```
-ID-005
-  ↓
-ID-004
-  ↓
-ID-003
-  ↓
-ID-002
-  ↓
-ID-001
+make csv-fim
 ```
 
-## 4\. Teste com IDs aleatórios
+---
 
-Para simular um comportamento menos previsível, podemos selecionar um ID aleatório a cada iteração.
+# 6\. CSV — aleatório
 
-```
-import http from 'k6/http';
-import { check } from 'k6';
-
-const BASE_URL = 'https://serverest.dev';
-const IDS_FILE = '../data/ids.txt';
-
-const ids = open(IDS_FILE)
-  .split('\n')
-  .map(id => id.trim())
-  .filter(id => id.length > 0);
-
-export const options = {
-  vus: 1,
-  iterations: 100,
-};
-
-export default function () {
-  const id = ids[Math.floor(Math.random() * ids.length)];
-
-  const response = http.get(`${BASE_URL}/usuarios/${id}`);
-
-  check(response, {
-    'status é 200': r => r.status === 200,
-    'resposta possui conteúdo': r => r.body && r.body.length > 0,
-  });
-}
-```
-
- Execute:
+Arquivo:
 
 ```
-k6 run teste-aleatorio.js
+scripts/csv/teste-aleatorio.js
 ```
 
-Nesse cenário, os IDs podem ser repetidos:
+Seleciona um usuário aleatoriamente a cada iteração.
+
+Execução:
 
 ```
-ID-003
-ID-001
-ID-005
-ID-002
-ID-002
-ID-004
-ID-001
-...
+make csv-aleatorio
 ```
 
-Isso permite executar uma quantidade de requisições maior que a quantidade de usuários existente.
+---
 
- ## 5\. Entendendo o `options`
+# 7\. TXT — início → fim
 
- A configuração:
-
-```
-export const options = {
-  vus: 1,
-  iterations: ids.length,
-};
-```
-
-significa:
-
-- `vus: 1` — utiliza um único Virtual User.
-- `iterations: ids.length` — executa uma it
-
-## `docker-compose` com **k6 + InfluxDB + Grafana**.
-
-Sim. Para sua estrutura atual, eu sugiro deixar o `docker-compose.yml` na raiz e usar o k6 em um container separado. O k6 envia as métricas para o InfluxDB, e o Grafana consulta o InfluxDB.
-
-### `docker-compose.yml`
-
-docker-compose.yml
+Arquivo:
 
 ```
-services:
-
-  influxdb:
-    image: influxdb:1.8
-    container_name: k6-influxdb
-    restart: unless-stopped
-    ports:
-      - "8086:8086"
-    environment:
-      INFLUXDB_DB: k6
-      INFLUXDB_HTTP_AUTH_ENABLED: "false"
-    volumes:
-      - influxdb_data:/var/lib/influxdb
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: k6-grafana
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    depends_on:
-      - influxdb
-    environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_USERS_ALLOW_SIGN_UP: "false"
-    volumes:
-      - grafana_data:/var/lib/grafana
-
-  k6:
-    image: grafana/k6:latest
-    container_name: k6-runner
-    depends_on:
-      - influxdb
-    volumes:
-      - ./scripts:/scripts
-      - ./data:/data
-    working_dir: /scripts
-    entrypoint: ["k6"]
-
-volumes:
-  influxdb_data:
-  grafana_data:
+scripts/txt/teste-inicio-fim.js
 ```
 
- Sua estrutura ficará:
+ Lê o `users.txt` e percorre os IDs na ordem original.
+
+ Execução:
 
 ```
-k6-serverest/
-├── README.md
-├── docker-compose.yml
-├── buscar_ids.sh
-├── data/
-│   └── ids.txt
-└── scripts/
-    ├── shuffle.js
-    ├── teste-aleatorio.js
-    ├── teste-fim-inicio.js
-    └── teste-inicio-fim.js
+make txt-inicio
 ```
 
-## Ajuste importante nos scripts
+---
 
-Como o container monta:
+# 8\. TXT — fim → início
 
-```
-- ./data:/data
-- ./scripts:/scripts
-```
-
-não precisamos mais depender de `../data/ids.txt`.
-
-Dentro do container, o arquivo estará em:
+Arquivo:
 
 ```
-/data/ids.txt
+scripts/txt/teste-fim-inicio.js
 ```
 
-Então recomendo alterar:
+Lê o `users.txt` e percorre os IDs na ordem inversa.
+
+Execução:
 
 ```
-const IDS_FILE = '../data/ids.txt';
+make txt-fim
 ```
 
-para:
+---
+
+# 9\. TXT — aleatório
+
+Arquivo:
 
 ```
-const IDS_FILE = '/data/ids.txt';
+scripts/txt/teste-aleatorio.js
 ```
 
-Isso também torna o caminho independente do diretório de execução.
+Seleciona aleatoriamente um ID do arquivo `users.txt`.
 
-## Subindo InfluxDB + Grafana
-
-Na raiz do projeto:
+Execução:
 
 ```
-docker compose up -d influxdb grafana
+make txt-aleatorio
+```
+
+---
+
+# Executando grupos de testes
+
+Além dos cenários individuais, o Makefile possui agrupadores.
+
+## Todos os cenários JSON
+
+```
+make json
+```
+
+Executa:
+
+```
+json-inicio
+json-fim
+json-aleatorio
+```
+
+Os cenários são executados sequencialmente.
+
+---
+
+ ## Todos os cenários CSV
+
+```
+make csv
+```
+
+Executa:
+
+```
+csv-inicio
+csv-fim
+csv-aleatorio
+```
+
+---
+
+## Todos os cenários TXT
+
+```
+make txt
+```
+
+Executa:
+
+```
+txt-inicio
+txt-fim
+txt-aleatorio
+```
+
+---
+
+# Executando todos os testes sequencialmente
+
+O target `all` atualiza a massa antes de iniciar os testes:
+
+```
+make all
+```
+
+Fluxo:
+
+```
+make all
+   │
+   ▼
+Atualiza usuários
+   │
+   ├── users.json
+   ├── users.csv
+   └── users.txt
+   │
+   ▼
+Testes JSON
+   │
+   ├── início → fim
+   ├── fim → início
+   └── aleatório
+   │
+   ▼
+Testes CSV
+   │
+   ├── início → fim
+   ├── fim → início
+   └── aleatório
+   │
+   ▼
+Testes TXT
+   │
+   ├── início → fim
+   ├── fim → início
+   └── aleatório
+```
+
+Nesse modo, os 9 cenários são executados **um após o outro**.
+
+---
+
+# Executando os 9 cenários simultaneamente
+
+Para executar os nove cenários ao mesmo tempo, o projeto possui:
+
+```
+scripts/teste-paralelo.js
+```
+
+Esse arquivo utiliza o recurso `scenarios` do k6.
+
+Cada cenário possui sua própria função:
+
+```
+json_inicio_fim
+json_fim_inicio
+json_aleatorio
+
+csv_inicio_fim
+csv_fim_inicio
+csv_aleatorio
+
+txt_inicio_fim
+txt_fim_inicio
+txt_aleatorio
+```
+
+Todos os cenários são iniciados com:
+
+```
+startTime: '0s'
+```
+
+Isso permite que os nove testes sejam executados simultaneamente dentro do mesmo processo k6.
+
+## Execução
+
+```
+make parallel
+```
+
+O fluxo é:
+
+```
+                 make parallel
+                       │
+                       ▼
+                Atualiza a massa
+                       │
+             ┌─────────┼─────────┐
+             ▼         ▼         ▼
+        users.json users.csv users.txt
+                       │
+                       ▼
+              teste-paralelo.js
+                       │
+        ┌──────────────┼──────────────┐
+        │              │              │
+        ▼              ▼              ▼
+       JSON           CSV            TXT
+        │              │              │
+     ┌──┼──┐        ┌──┼──┐        ┌──┼──┐
+     ▼  ▼  ▼        ▼  ▼  ▼        ▼  ▼  ▼
+    I→F F→I Rand   I→F F→I Rand   I→F F→I Rand
+```
+
+Dessa forma, os nove cenários ficam concorrentes e podem ser analisados simultaneamente.
+
+---
+
+# Makefile
+
+O `Makefile` é o ponto de entrada principal do projeto.
+
+## Massa de dados
+
+```
+make users-local
+```
+
+Atualiza:
+
+```
+data/users.json
+data/users.csv
+data/users.txt
+```
+
+---
+
+## Infraestrutura
+
+Subir os containers:
+
+```
+make up
+```
+
+Subir reconstruindo as imagens:
+
+```
+make up-build
+```
+
+Parar os containers:
+
+```
+make down
+```
+
+Reiniciar:
+
+```
+make restart
+```
+
+Ver status:
+
+```
+make ps
+```
+
+---
+
+## Logs
+
+Todos os serviços:
+
+```
+make logs
+```
+
+Grafana:
+
+```
+make logs-grafana
+```
+
+InfluxDB:
+
+```
+make logs-influxdb
+```
+
+k6:
+
+```
+make logs-k6
+```
+
+---
+
+# Comandos dos testes
+
+## JSON
+
+```
+make json-inicio
+make json-fim
+make json-aleatorio
+make json
+```
+
+## CSV
+
+```
+make csv-inicio
+make csv-fim
+make csv-aleatorio
+make csv
+```
+
+## TXT
+
+```
+make txt-inicio
+make txt-fim
+make txt-aleatorio
+make txt
+```
+
+## Todos os testes sequenciais
+
+```
+make all
+```
+
+## Todos os testes simultâneos
+
+```
+make parallel
+```
+
+---
+
+# Docker Compose
+
+Os testes são executados através do Docker Compose.
+
+O serviço k6 utiliza os scripts montados em:
+
+```
+/scripts
+```
+
+e os arquivos de massa montados em:
+
+```
+/data
+```
+
+A relação entre host e container é:
+
+```
+Host                    Container
+
+./scripts       ──────► /scripts
+./data          ──────► /data
+```
+
+Assim, por exemplo:
+
+```
+./data/users.json
+```
+
+fica disponível para o k6 como:
+
+```
+/data/users.json
+```
+
+ E:
+
+```
+./scripts/teste-paralelo.js
+```
+
+ fica disponível como:
+
+```
+/scripts/teste-paralelo.js
+```
+
+---
+
+# InfluxDB e Grafana
+
+A infraestrutura utiliza:
+
+```
+k6
+ │
+ │ métricas
+ ▼
+InfluxDB
+ │
+ │ consultas
+ ▼
+Grafana
+```
+
+O InfluxDB armazena as métricas produzidas pelo k6.
+
+O Grafana permite visualizar e analisar:
+
+- Tempo de resposta.
+- Throughput.
+- Requisições.
+- Taxa de erros.
+- Checks.
+- Percentis.
+- Duração das requisições.
+- Comparação entre cenários.
+
+---
+
+# Subindo a infraestrutura
+
+Para iniciar os serviços:
+
+```
+make up
 ```
 
 Verifique:
 
 ```
-docker compose ps
+make ps
 ```
 
-Você deverá ter:
+Os principais serviços são:
 
 ```
-NAME            STATUS
-k6-influxdb     Up
-k6-grafana      Up
-```
-
-O Grafana estará disponível em:
-
-```
-http://localhost:3000
-```
-
-Login inicial:
-
-```
-Usuário: admin
-Senha:   admin
-```
-
-## Executando o k6
-
-Agora podemos executar o teste dentro do container:
-
-```
-docker compose run --rm k6 \
-  run \
-  --out influxdb=http://influxdb:8086/k6 \
-  /scripts/teste-inicio-fim.js
-```
-
-O fluxo será:
-
-```mermaid
-flowchart TB
-    SR["ServeRest<br/>serverest.dev"]
-    IDS["ids.txt<br/>./data/"]
-    K6["k6<br/>container"]
-    INFLUX["InfluxDB<br/>:8086"]
-    GRAFANA["Grafana<br/>:3000"]
-
-    SR -->|HTTP| K6
-    IDS --> K6
-    K6 -->|métricas| INFLUX
-    INFLUX --> GRAFANA
-```
-
- ## Configurando o Grafana
-
- Acesse:
-
-```
-http://localhost:3000
-```
-
-Depois vá em:
-
-**Connections → Data sources → Add data source → InfluxDB**
-
-Configure:
-
-```
-URL:
-http://influxdb:8086
-
-Database:
 k6
+influxdb
+grafana
 ```
 
-Não precisa configurar usuário e senha porque desabilitamos a autenticação do InfluxDB neste ambiente.
-
-Clique em **Save & test**.
-
-Você deverá receber uma confirmação de conexão.
-
-## Executando os outros cenários
-
-### Início → fim
+O Grafana fica disponível em:
 
 ```
-docker compose run --rm k6 \
-  run \
-  --out influxdb=http://influxdb:8086/k6 \
-  /scripts/teste-inicio-fim.js
+http://localhost:3000
 ```
 
-### Fim → início
+ O InfluxDB fica disponível em:
 
 ```
-docker compose run --rm k6 \
-  run \
-  --out influxdb=http://influxdb:8086/k6 \
-  /scripts/teste-fim-inicio.js
+http://localhost:8086
 ```
 
-### Aleatório
+---
+
+ # Fluxo recomendado
+
+ Para executar uma bateria completa de testes:
 
 ```
-docker compose run --rm k6 \
-  run \
-  --out influxdb=http://influxdb:8086/k6 \
-  /scripts/teste-aleatorio.js
+make parallel
 ```
 
-## Uma melhoria que vale fazer agora
+Esse comando é o fluxo recomendado para os testes concorrentes.
 
- Como você está montando um projeto de testes de performance, eu faria uma pequena evolução no Compose e adicionaria **Grafana provisionado automaticamente**, incluindo:
-
-- Data source do InfluxDB criado automaticamente.
-- Dashboard do k6 importado automaticamente.
-- Configuração de thresholds.
-- Variáveis para controlar `VUs`, duração e quantidade de iterações.
-- Comandos `make up`, `make test`, `make test-random` e `make down`.
-
-Assim você poderia simplesmente fazer:
+Internamente:
 
 ```
-docker compose up -d
+1. Consulta a API ServeRest
+2. Gera users.json
+3. Gera users.csv
+4. Gera users.txt
+5. Inicia o k6
+6. Executa os 9 cenários simultaneamente
+7. Envia as métricas para o InfluxDB
+8. Permite análise no Grafana
 ```
 
-e acessar o Grafana já com o dashboard do k6 pronto.
+---
+
+ # Diferença entre `all` e `parallel`
+
+ ## `make all`
+
+ Executa os testes **sequencialmente**:
+
+```
+Massa
+  ↓
+JSON
+  ↓
+CSV
+  ↓
+TXT
+```
+
+ É útil para analisar cada grupo de testes de forma isolada.
+
+## `make parallel`
+
+Executa os nove cenários **simultaneamente**:
+
+```
+                    k6
+                     │
+       ┌─────────────┼─────────────┐
+       │             │             │
+      JSON          CSV           TXT
+       │             │             │
+    ┌──┼──┐       ┌──┼──┐       ┌──┼──┐
+    │  │  │       │  │  │       │  │  │
+   I→F F→I R     I→F F→I R     I→F F→I R
+```
+
+Esse modo é indicado para observar o comportamento da API quando diferentes padrões de acesso acontecem simultaneamente.
+
+---
+
+ # Limpeza
+
+Parar e remover os containers:
+
+```
+make clean
+```
+
+Remover também os volumes:
+
+```
+make clean-all
+```
+
+> `clean-all` remove os volumes do Docker e, consequentemente, os dados persistidos pelo InfluxDB e Grafana.
+
+---
+
+# Resumo dos comandos
+
+| Comando | Descrição |
+| --- | --- |
+| `make up` | Inicia a infraestrutura |
+| `make down` | Para a infraestrutura |
+| `make restart` | Reinicia os serviços |
+| `make ps` | Exibe o status dos containers |
+| `make users-local` | Atualiza a massa de usuários |
+| `make json` | Executa os 3 cenários JSON |
+| `make csv` | Executa os 3 cenários CSV |
+| `make txt` | Executa os 3 cenários TXT |
+| `make all` | Atualiza a massa e executa os 9 testes sequencialmente |
+| `make parallel` | Atualiza a massa e executa os 9 cenários simultaneamente |
+| `make logs` | Exibe os logs |
+| `make logs-grafana` | Exibe os logs do Grafana |
+| `make logs-influxdb` | Exibe os logs do InfluxDB |
+| `make clean` | Remove os containers |
+| `make clean-all` | Remove containers e volumes |
+
+---
+
+# Fluxo rápido
+
+Para iniciar o ambiente:
+
+```
+make up
+```
+
+Para executar os 9 cenários simultaneamente:
+
+```
+make parallel
+```
+
+Depois, acesse:
+
+```
+http://localhost:3000
+```
+
+para analisar as métricas no Grafana.
+
+Para encerrar:
+
+```
+make clean
+```

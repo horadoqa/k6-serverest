@@ -8,4 +8,8 @@ datasources:
     url: http://influxdb:8086
     database: k6
     isDefault: true
-    editable: true
+    editable: false
+    jsonData:
+      version: InfluxQL
+      httpMode: POST
+      timeInterval: 1s

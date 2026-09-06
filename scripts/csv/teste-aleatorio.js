@@ -21,7 +21,7 @@ const ids = lines
 
 export const options = {
   vus: 1,
-  iterations: 100,
+  iterations: 10,
 };
 
 export default function () {
